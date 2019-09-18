@@ -1,30 +1,30 @@
 package io.microsamples.api.gateway;
 
 //import lombok.Value;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.factory.AbstractNameValueGatewayFilterFactory;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import reactor.core.publisher.Mono;
 
 
 @SpringBootApplication
+@EnableConfigurationProperties(UriConfiguration.class)
 public class GatewayApplication {
-    @Value("${test.uri:http://httpbin.org}")
-    String uri;
+
 
     @Bean
-    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
-
+    public RouteLocator customRouteLocator(RouteLocatorBuilder builder, UriConfiguration uriConfiguration) {
+        String uri = uriConfiguration.getHttpbin();
         return builder.routes()
-//                .route("path_route", r -> r.path("/get")
-//                        .uri(uri))
+                .route("path_route", r -> r.path("/get")
+                        .uri(uri))
                 .route("simple_route", r -> r.host("**.abc.org").and().path("/anything/png")
                         .filters(f -> f.addResponseHeader("X-TestHeader", "foobar"))
                         .uri(uri)
@@ -79,17 +79,16 @@ public class GatewayApplication {
     }
 }
 
-class AddRequestHeaderGatewayFilterFactory extends AbstractNameValueGatewayFilterFactory {
+@ConfigurationProperties
+class UriConfiguration {
 
-    @Override
-    public GatewayFilter apply(AbstractNameValueGatewayFilterFactory.NameValueConfig config) {
-        return (exchange, chain) -> {
-            ServerHttpRequest request = exchange.getRequest().mutate()
-                    .header(config.getName(), config.getValue())
-                    .build();
+    private String httpbin = "http://httpbin.org:80";
 
-            return chain.filter(exchange.mutate().request(request).build());
-        };
+    public String getHttpbin() {
+        return httpbin;
     }
 
+    public void setHttpbin(String httpbin) {
+        this.httpbin = httpbin;
+    }
 }
